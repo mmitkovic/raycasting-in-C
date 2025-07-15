@@ -35,7 +35,65 @@ class Map {
         }
 }
 
+class   Player {
+        constructor() {
+                this.x = WINDOW_WIDTH / 2;
+                this.y = WINDOW_HEIGHT / 2;
+                this.radius = 3;
+                this.turnDirection = 0; // -1 if left, +1 if right
+                this.walkDirection = 0; // -1 if back, +1 if forward
+                this.rotationAngle = Math.PI / 2;
+                this.moveSpeed = 2.0;
+                this.rotationSpeed = 2 * (Math.PI / 180); // (Math.PI/180) is conversion to radius
+        }
+        update() {
+                // update player pos based on turnDirection and walkDirection
+                console.log(this.turnDirection);
+                this.rotationAngle += this.turnDirection * this.rotationSpeed;
+                /* Going Forward */
+                var moveStep = this.walkDirection * this.moveSpeed;
+                this.x += Math.cos(this.rotationAngle) * moveStep;
+                this.y += Math.sin(this.rotationAngle) * moveStep;
+        }
+        render() {
+                noStroke();
+                fill("red");
+                circle(this.x, this.y, this.radius);
+                stroke("red");
+                line(
+                        this.x, 
+                        this.y, 
+                        this.x + Math.cos(this.rotationAngle) * 30, 
+                        this.y + Math.sin(this.rotationAngle) * 30);
+        }
+}
+
 var grid = new Map();
+var player = new Player();
+
+function keyPressed() {
+        if (keyCode == UP_ARROW) {
+                player.walkDirection = +1;
+        } else if (keyCode == DOWN_ARROW) {
+                player.walkDirection = -1;
+        } else if (keyCode == RIGHT_ARROW) {
+                player.turnDirection = +1;
+        } else if (keyCode == LEFT_ARROW) {
+                player.turnDirection = -1;
+        }
+}
+
+function keyReleased() {
+        if (keyCode == UP_ARROW) {
+                player.walkDirection = 0;
+        } else if (keyCode == DOWN_ARROW) {
+                player.walkDirection = 0;
+        } else if (keyCode == RIGHT_ARROW) {
+                player.turnDirection = 0;
+        } else if (keyCode == LEFT_ARROW) {
+                player.turnDirection = 0;
+        }
+}
 
 function setup() {
 	// TODO:  initialize all objects
@@ -43,12 +101,13 @@ function setup() {
 }
 
 function update() {
-	// TODO: update all game objects before we render the next frame
-        
+	// update all game objects before we render the next frame
+        player.update();
 }
 
 function draw() {
         // render all objects frame by frame
 	update();
 	grid.render();
+        player.render();
 }
