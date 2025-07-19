@@ -21,6 +21,14 @@ class Map {
 
 		];
 	}
+        hasWallAt(x, y)
+        {
+                if (x < 0 || x > WINDOW_WIDTH || y < 0 || y > WINDOW_HEIGHT)
+                        return true;
+                var mapX = Math.floor(x / TILE_SIZE);
+                var mapY = Math.floor(y / TILE_SIZE);
+                return this.grid[mapY][mapX] != 0;
+        }
         render() {
                 for (var i = 0; i < MAP_NUM_ROWS; i++) {
                         for (var j = 0; j < MAP_NUM_COLS; j++) {
@@ -52,8 +60,14 @@ class   Player {
                 this.rotationAngle += this.turnDirection * this.rotationSpeed;
                 /* Going Forward */
                 var moveStep = this.walkDirection * this.moveSpeed;
-                this.x += Math.cos(this.rotationAngle) * moveStep;
-                this.y += Math.sin(this.rotationAngle) * moveStep;
+                var newPlayerX = this.x + Math.cos(this.rotationAngle) * moveStep;
+                var newPlayerY = this.y + Math.sin(this.rotationAngle) * moveStep;
+                // Only set if not colliding
+                if (!grid.hasWallAt(newPlayerX, newPlayerY))
+                {
+                        this.x = newPlayerX;
+                        this.y = newPlayerY;
+                }
         }
         render() {
                 noStroke();
