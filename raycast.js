@@ -78,18 +78,77 @@ class   Player {
                 noStroke();
                 fill("red");
                 circle(this.x, this.y, this.radius);
-                stroke("red");
+               /*stroke("red");
                 line(
                         this.x, 
                         this.y, 
                         this.x + Math.cos(this.rotationAngle) * 30, 
-                        this.y + Math.sin(this.rotationAngle) * 30);
+                        this.y + Math.sin(this.rotationAngle) * 30); */
         }
 }
 
 class Ray {
         constructor(rayAngle) {
-                this.rayAngle = rayAngle;
+                this.rayAngle = normalizeAngle(rayAngle);
+                this.wallHitX = 0;
+                this.wallHitY = 0; // track the position where the rays hits the wall
+                this.distance = 0; // distance between player and collision between X and Y
+        
+                this.isRayFacingDown = this.rayAngle > 0 && this.rayAngle < Math.PI;
+                this.isRayFacingUp = !this.isRayFacingDown;
+
+                this.isRayFacingRight = this.rayAngle < 0.5 * Math.PI || this.rayAngle > 1.5 * Math.PI;
+                this.isRayFacingLeft = !this.isRayFacingRight;
+        }
+        cast(columnId) {
+                var xintercept, yintercept;
+                var xstep, ystep;
+                
+                /* --------------------------------------------- */
+                /* --- HORIZONTAL RAY-GRID INTERSECTION CODE --- */
+                /* --------------------------------------------- */
+                var foundHorWallHit = false;
+                var wallHitX = 0;
+                var wallHitY = 0;
+
+                console.log("isRayFacingRight?", this.isRayFacingRight);
+
+                // Find the y-coordinate of the closest horizontal grid intersection
+                yintercept = Math.floor(player.y / TILE_SIZE) * TILE_SIZE;
+                yintercept += this.isRayFacingDown ? TILE_SIZE : 0;
+
+                // Find the x-coordinate of the closest horizontal grid intersection
+                xintercept = player.x + (yintercept - player.y) / Math.tan(this.rayAngle);
+
+                // Calculate the increment xstep and ystep
+                ystep = TILE_SIZE;
+                ystep *= this.isRayFacingUp ? -1 : 1;
+
+                xstep = TILE_SIZE / Math.tan(this.rayAngle);
+                xstep *= (this.isRayFacingLeft && xstep > 0) ? -1 : 1;
+                xstep *= (this.isRayFacingRight && xstep < 0) ? -1 : 1;
+
+                var nextHorTouchX = xintercept;
+                var nextHorTouchY = yintercept;
+                if (this.isRayFacingUp)
+                        nextHorTouchY--; // move one pixel so that the player is in the grid
+
+                // Increment xstep and ystep until we find a wall
+                while (nextHorTouchX >= 0 && nextHorTouchX <= WINDOW_WIDTH
+                        && nextHorTouchY >= 0 && nextHorTouchY <= WINDOW_HEIGHT) {
+                        if (grid.hasWallAt(nextHorTouchX, nextHorTouchY)) {
+                                foundHorWallHit = false;
+                                wallHitX = nextHorTouchX;
+                                wallHitY = nextHorTouchY;
+                                stroke("red");
+                                line(player.x, player.y, wallHitX, wallHitY);
+                                break ;
+                        } else {
+                                nextHorTouchX += xstep;
+                                nextHorTouchY += ystep;
+                        }
+                }
+
         }
         render() {
                 stroke("rgba(255, 0, 0, 0.1)");
@@ -142,11 +201,18 @@ function castAllRays() {
         for (var i = 0; i < NUM_RAYS; i++)
         {
                 var ray = new Ray(rayAngle);
-                // TODO: ray.cast()
+                ray.cast(columnId);
                 rays.push(ray);
                 rayAngle += FOV_ANGLE / NUM_RAYS;
                 columnId++;
         }
+}
+
+function normalizeAngle(angle) {
+        angle = angle % (2 * Math.PI); // this is how we always keep our value between 0 and 360
+        if (angle < 0)
+                angle = 2 * Math.PI + angle;
+        return angle;
 }
 
 function setup() {
@@ -157,8 +223,7 @@ function setup() {
 function update() {
 	// update all game objects before we render the next frame
         player.update();
-        castAllRays();
-}
+       }
 
 function draw() {
         // render all objects frame by frame
@@ -168,4 +233,6 @@ function draw() {
                 ray.render();
         }
         player.render();
+        castAllRays();
+
 }
