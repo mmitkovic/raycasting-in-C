@@ -93,6 +93,7 @@ class Ray {
                 this.wallHitX = 0;
                 this.wallHitY = 0; // track the position where the rays hits the wall
                 this.distance = 0; // distance between player and collision between X and Y
+                this.wasHitVertical = false;
         
                 this.isRayFacingDown = this.rayAngle > 0 && this.rayAngle < Math.PI;
                 this.isRayFacingUp = !this.isRayFacingDown;
@@ -108,8 +109,8 @@ class Ray {
                 /* --- HORIZONTAL RAY-GRID INTERSECTION CODE --- */
                 /* --------------------------------------------- */
                 var foundHorWallHit = false;
-                var wallHitX = 0;
-                var wallHitY = 0;
+                var horWallHitX = 0;
+                var horWallHitY = 0;
 
                 console.log("isRayFacingRight?", this.isRayFacingRight);
 
@@ -138,25 +139,82 @@ class Ray {
                         && nextHorTouchY >= 0 && nextHorTouchY <= WINDOW_HEIGHT) {
                         if (grid.hasWallAt(nextHorTouchX, nextHorTouchY)) {
                                 foundHorWallHit = false;
-                                wallHitX = nextHorTouchX;
-                                wallHitY = nextHorTouchY;
+                                horWallHitX = nextHorTouchX;
+                                horWallHitY = nextHorTouchY;
                                 stroke("red");
-                                line(player.x, player.y, wallHitX, wallHitY);
+                                line(player.x, player.y, horWallHitX, horWallHitY);
                                 break ;
                         } else {
                                 nextHorTouchX += xstep;
                                 nextHorTouchY += ystep;
                         }
                 }
+                /* --------------------------------------------- */
+                /* --- VERTICAL RAY-GRID INTERSECTION CODE --- */
+                /* --------------------------------------------- */
+                var foundVerWallHit = false;
+                var verWallHitX = 0;
+                var verWallHitY = 0;
 
+                console.log("isRayFacingRight?", this.isRayFacingRight);
+
+                // Find the x-coordinate of the closest vertical grid intersection
+                xintercept = Math.floor(player.x / TILE_SIZE) * TILE_SIZE;
+                xintercept += this.isRayFacingRight ? TILE_SIZE : 0;
+
+                // Find the y-coordinate of the closest vertical grid intersection
+                yintercept = player.y + (xintercept - player.x) * Math.tan(this.rayAngle);
+
+                // Calculate the increment xstep and ystep
+                xstep = TILE_SIZE;
+                xstep *= this.isRayFacingLeft ? -1 : 1;
+
+                ystep = TILE_SIZE * Math.tan(this.rayAngle);
+                ystep *= (this.isRayFacingUp && ystep > 0) ? -1 : 1;
+                ystep *= (this.isRayFacingDown && ystep < 0) ? -1 : 1;
+
+                var nextVerTouchX = xintercept;
+                var nextVerTouchY = yintercept;
+                if (this.isRayFacingLeft)
+                        nextVerTouchX--; // move one pixel so that the player is in the grid
+
+                // Increment xstep and ystep until we find a wall
+                while (nextVerTouchX >= 0 && nextVerTouchX <= WINDOW_WIDTH
+                        && nextVerTouchY >= 0 && nextVerTouchY <= WINDOW_HEIGHT) {
+                        if (grid.hasWallAt(nextVerTouchX, nextVerTouchY)) {
+                                foundVerWallHit = false;
+                                verWallHitX = nextVerTouchX;
+                                verWallHitY = nextVerTouchY;
+                                stroke("red");
+                                line(player.x, player.y, verWallHitX, verWallHitY);
+                                break ;
+                        } else {
+                                nextVerTouchX += xstep;
+                                nextVerTouchY += ystep;
+                        }
+                }
+
+                // calculate both horizontal and ver distances and choose the smallest value.
+                var horHitDist = (foundHorWallHit) 
+                        ? distanceBetweenPoints(player.x, player.y, horWallHitX, horWallHitY)
+                        : Number.MAX_VALUE;
+                var verHitDist = (foundVerWallHit)
+                        ? distanceBetweenPoints(player.x, player.y, verWallHitX, verWallHitY)
+                        : Number.MAX_VALUE;
+
+                // only store the smallest tof the distances
+                this.wallHitX = (horHitDist < verHitDist) ? horWallHitX : verWallHitX;
+                this.wallHitY = (horHitDist < verHitDist) ? horWallHitY : verWallHitY;
+                this.distance = (horHitDist < verHitDist) ? horHitDist : verHitDist;
+                this.wasHitVertical = (verHitDist < horHitDist);
         }
         render() {
                 stroke("rgba(255, 0, 0, 0.1)");
                 line(
                         player.x,
                         player.y,
-                        player.x + Math.cos(this.rayAngle) * 30,
-                        player.y + Math.sin(this.rayAngle) * 30
+                        this.wallHitX,
+                        this.wallHitY
                 );
         }
 }
@@ -215,6 +273,10 @@ function normalizeAngle(angle) {
         return angle;
 }
 
+function distanceBetweenPoints(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
 function setup() {
 	// TODO:  initialize all objects
         createCanvas(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -223,7 +285,8 @@ function setup() {
 function update() {
 	// update all game objects before we render the next frame
         player.update();
-       }
+        castAllRays();
+}
 
 function draw() {
         // render all objects frame by frame
@@ -233,6 +296,4 @@ function draw() {
                 ray.render();
         }
         player.render();
-        castAllRays();
-
 }
